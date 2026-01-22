@@ -1,0 +1,21 @@
+# Virtual environments
+venv
+venv/
+venv311
+venv311/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Runtime generated folders
+uploads/
+results/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
