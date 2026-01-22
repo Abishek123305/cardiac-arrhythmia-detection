@@ -73,8 +73,4 @@ Suitable for healthcare-oriented AI applications
 
 ---
 
-## ✅ STEP 8: Push README to GitHub
-```powershell
-git add README.md
-git commit -m "Add recruiter-friendly README"
-git push
+
