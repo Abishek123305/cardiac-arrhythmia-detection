@@ -1,143 +1,80 @@
-# ECG Arrhythmia Detection Web App
+# 🫀 Cardiac Arrhythmia Detection System
 
-This project is a Flask-based web application designed to analyze ECG (Electrocardiogram) data for arrhythmia detection. It utilizes a powerful hybrid Machine Learning pipeline combining **CNN, Bi-LSTM, and BR-SquareNet** architectures for deep feature extraction, along with a Meta Random Forest classifier for robust recording-level classification.
+A full-stack AI application that detects cardiac arrhythmia from ECG signals using
+deep learning and machine learning techniques.
 
-## Features
+This project demonstrates real-world medical AI deployment with
+proper validation, error handling, and explainability.
 
-- **ECG Analysis**: Processes ECG recordings (in ZIP format containing `.dat`, `.hea`, `.atr` files).
-- **Hybrid AI Model**:
-  - **Deep Hybrid Network**: Integrates **CNN** (spatial features), **Bi-LSTM** (temporal dependencies), and **BR-SquareNet** (residual learning) for state-of-the-art heartbeat classification.
-  - **Meta Random Forest**: Aggregates beat-level predictions to classify the entire recording.
-- **Risk Assessment**: Categorizes results into Normal, Low Risk, High Risk, Critical, or Uncertain.
-- **Key Visualizations**: Generates ECG plots with highlighted R-peaks.
-- **PDF Reporting**: Automatically generates a downloadable PDF report with analysis results and plots.
-- **REST API**: Provides an API endpoint for integration with other systems.
+---
 
-## Preprocessing
+## 🚀 Features
+- ECG signal analysis using MIT-BIH dataset
+- Hybrid Deep Learning + Random Forest model
+- Beat-level arrhythmia classification
+- Automatic ECG plot generation
+- PDF medical report generation
+- Robust validation for low-quality ECG signals
+- Flask-based web application
 
-The raw ECG data undergoes rigorous preprocessing to ensure high-quality input for the model:
+---
 
-1.  **Filtering**:
-    -   **Bandpass Filter**: 4th-order Butterworth filter (0.5–40 Hz) to remove muscle noise and baseline wander.
-    -   **High-pass Filter**: 2nd-order Butterworth filter (0.5 Hz) for additional stability.
-2.  **Normalization**: Z-score normalization `(x - mean) / std` to standardize signal amplitude.
-3.  **Beat Segmentation**:
-    -   R-peaks are detected (or read from annotations).
-    -   Beats are extracted with a fixed window of **280 samples** (90 before R-peak, 190 after).
-4.  **AAMI Mapping**: MIT-BIH annotations are mapped to 5 standard classes:
-    -   **N**: Normal
-    -   **S**: Supraventricular
-    -   **V**: Ventricular
-    -   **F**: Fusion
-    -   **Q**: Unknown/Paced
+## 🧠 Tech Stack
+- **Backend:** Python, Flask
+- **ML/DL:** TensorFlow, Keras, Scikit-Learn
+- **Signal Processing:** WFDB, NeuroKit2
+- **Visualization:** Matplotlib
+- **Deployment:** Render
+- **Dataset:** MIT-BIH Arrhythmia Database
 
-## Evaluation Metrics
+---
 
-The model (`Train/hybrid.py`) is evaluated using comprehensive metrics to ensure reliability:
+## ⚙️ How It Works
+1. User uploads an ECG ZIP file (`.dat`, `.hea`, `.atr`)
+2. System validates ECG quality
+3. Heartbeats (R-peaks) are detected
+4. Features are extracted from ECG signals
+5. Hybrid model predicts arrhythmia class
+6. Risk level is assigned
+7. ECG plot and PDF report are generated
 
--   **Accuracy**: Overall correctness of predictions.
--   **F1-Score**: Macro and Weighted averages to account for class imbalance.
--   **Confusion Matrix**: Visualizes misclassifications (Counts & Normalized).
--   **ROC Curves & AUC**: One-vs-Rest ROC curves with Area Under the Curve (AUC) scores for each class.
--   **Training Curves**: Accuracy and Loss plotted over epochs to monitor convergence and overfitting.
+---
 
-## Tech Stack
+## ⚠️ Important Note (Medical Safety)
+If ECG quality is insufficient or heartbeats cannot be detected reliably,
+the system **safely rejects the input** instead of producing an incorrect diagnosis.
 
-- **Backend**: Flask (Python)
-- **Data Processing**: NumPy, SciPy, WFDB, NeuroKit2
-- **Machine Learning**: TensorFlow (Keras), Scikit-Learn (Joblib for Random Forest)
-- **Visualization**: Matplotlib
-- **Reporting**: ReportLab
+This behavior reflects real-world medical AI safety standards.
 
-## Project Structure
+---
 
-```
-├── app.py                  # Main Flask application entry point
-├── model.py                # Core inference logic (beat extraction, feature engineering, prediction)
-├── model_pipeline.py       # Standalone pipeline script (similar to model.py)
-├── utils/
-│   └── pdf_report.py       # Utility for generating PDF reports
-├── templates/
-│   └── index.html          # Frontend HTML template
-├── static/                 # Static assets (CSS, JS)
-├── uploads/                # Directory for uploaded ECG files
-├── results/                # Directory for generated plots and reports
-│   ├── plots/
-│   └── reports/
-├── models/                 # Pre-trained models directory
-│   └── best_final_hybrid.h5
-├── meta_rf/                # Directory for Meta Random Forest model
-│   └── meta_rf.pkl
-└── requirements.txt        # Python dependencies
-```
+## 🖥️ Running Locally
 
-## Setup & Installation
+pip install -r requirements.txt
+python app.py
+Open browser:
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository-url>
-    cd <repository-directory>
-    ```
 
-2.  **Create a Virtual Environment (Optional but Recommended):**
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows: venv\Scripts\activate
-    ```
+http://127.0.0.1:5000
+🌐 Deployment
+The application is deployed on Render and runs in a production-like environment.
 
-3.  **Install Dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
+📌 Why This Project Matters
+Demonstrates end-to-end AI system design
 
-    *If `requirements.txt` is missing, manually install:*
-    ```bash
-    pip install flask numpy scipy wfdb tensorflow matplotlib joblib neurokit2 reportlab
-    ```
+Shows understanding of real-world ML limitations
 
-4.  **Ensure Model Files are Present:**
-    - `models/best_final_hybrid.h5`
-    - `meta_rf/meta_rf.pkl`
+Focuses on correctness and safety over blind predictions
 
-## Usage
+Suitable for healthcare-oriented AI applications
 
-1.  **Run the Application:**
-    ```bash
-    python app.py
-    ```
 
-2.  **Access the Web Interface:**
-    Open your browser and navigate to `http://127.0.0.1:5000`.
 
-3.  **Analyze an ECG Record:**
-    - Prepare a ZIP file containing the MIT-BIH style ECG record files (e.g., `100.dat`, `100.hea`, and optionally `100.atr`).
-    - Upload the ZIP file via the web interface.
-    - View the prediction, confidence score, risk level, and ECG plot.
-    - Download the PDF report.
 
-## API Endpoints
+---
 
-### `POST /analyze`
-Uploads and analyzes an ECG record ZIP file.
-
-- **RequestBody**: `multipart/form-data` with `file` (ZIP archive).
-- **Response**: JSON object with:
-    - `prediction`: Class label (e.g., Normal, Atrial Fibrillation).
-    - `confidence`: Confidence score.
-    - `risk`: Risk level.
-    - `plot`: Filename of the generated ECG plot.
-    - `pdf`: Filename of the generated PDF report.
-
-## Classes & Risk Levels
-
-The system classifies recordings into the following categories:
-- **N**: Normal (Green)
-- **S**: Supraventricular Ectopic Beat -> Low Risk (Orange)
-- **V**: Ventricular Ectopic Beat -> High Risk (Red)
-- **F**: Fusion Beat -> Critical (Dark Red)
-- **Q**: Unknown Beat -> Uncertain (Gray)
-
-## Models
-
-- **Deep Hybrid Model**: Combines **CNN**, **Bi-LSTM**, and **BR-SquareNet** for comprehensive ECG signal analysis.
-- **Meta Random Forest**: specific model trained on aggregated features of recordings.
+## ✅ STEP 8: Push README to GitHub
+```powershell
+git add README.md
+git commit -m "Add recruiter-friendly README"
+git push
