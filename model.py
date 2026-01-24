@@ -1,5 +1,6 @@
 # ============================================================
-# CNN + META-RF PIPELINE (INFERENCE ONLY - .dat + .hea)
+# CNN + META-RF PIPELINE (INFERENCE ONLY - MIT-BIH ECG)
+# Uses .dat + .hea + .atr (ANNOTATED R-PEAKS)
 # ============================================================
 
 import os
@@ -10,9 +11,8 @@ import matplotlib.pyplot as plt
 from collections import Counter
 from scipy.signal import butter, filtfilt
 import joblib
-import neurokit2 as nk
 import matplotlib
-matplotlib.use("Agg")   
+matplotlib.use("Agg")
 
 # ================= CONFIG =================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -24,8 +24,8 @@ BEAT_LEN = 280
 PRE_R = 90
 POST_R = 190
 
-CLASS_TO_IDX = {'N':0,'S':1,'V':2,'F':3,'Q':4}
-IDX_TO_CLASS = {v:k for k,v in CLASS_TO_IDX.items()}
+CLASS_TO_IDX = {'N': 0, 'S': 1, 'V': 2, 'F': 3, 'Q': 4}
+IDX_TO_CLASS = {v: k for k, v in CLASS_TO_IDX.items()}
 
 # ================= LOAD MODELS =================
 print("Loading beat-level Hybrid Model...")
@@ -39,32 +39,27 @@ print("Meta-RF loaded ✔")
 # ================= ECG FILTER =================
 def filter_ecg(sig, fs):
     nyq = 0.5 * fs
-    b, a = butter(4, [0.5/nyq, 40/nyq], btype='band')
+    b, a = butter(4, [0.5 / nyq, 40 / nyq], btype='band')
     sig = filtfilt(b, a, sig)
     return (sig - sig.mean()) / (sig.std() + 1e-8)
 
-# ================= R-PEAK DETECTION =================
-def detect_rpeaks(sig, fs):
-    """
-    Automatic R-peak detection from ECG signal
-    """
-    try:
-        _, rpeaks = nk.ecg_peaks(sig, sampling_rate=fs)
-        return rpeaks["ECG_R_Peaks"]
-    except Exception as e:
-        print("R-peak detection failed:", e)
-        return []
-
-# ================= BEAT EXTRACTION =================
+# ================= BEAT EXTRACTION (USING .atr) =================
 def extract_beats_from_record(rec_id, base_path):
+    """
+    Extract beats using MIT-BIH annotated R-peaks (.atr)
+    """
 
+    # Load ECG signal
     record = wfdb.rdrecord(os.path.join(base_path, rec_id))
-
     fs = record.fs
     sig = filter_ecg(record.p_signal[:, 0], fs)
 
-    # 🔥 AUTO R-PEAK DETECTION (NO .atr)
-    rlocs = detect_rpeaks(sig, fs)
+    # Load annotations (GROUND TRUTH R-PEAKS)
+    ann = wfdb.rdann(os.path.join(base_path, rec_id), 'atr')
+    rlocs = ann.sample
+
+    if len(rlocs) == 0:
+        raise ValueError("No annotated beats found in ECG record")
 
     beats = []
 
@@ -83,29 +78,37 @@ def extract_beats_from_record(rec_id, base_path):
     X = np.array(beats, dtype=np.float32)[..., None]
     return X, sig, rlocs, fs
 
-# ================= RECORD FEATURES =================
+# ================= RECORD-LEVEL FEATURES =================
 def record_features(rec_id, base_path):
+    """
+    Aggregate beat-level predictions into record-level features
+    """
 
     X, _, _, _ = extract_beats_from_record(rec_id, base_path)
 
     if len(X) == 0:
-        raise ValueError("No beats detected in ECG signal")
+        raise ValueError("No beats available for feature extraction")
 
     probs = beat_model.predict(X, verbose=0)
     preds = [IDX_TO_CLASS[i] for i in np.argmax(probs, axis=1)]
-
     counts = Counter(preds)
 
-    return np.array([[ 
+    return np.array([[
         len(preds),
         counts['S'] + counts['V'] + counts['F'] + counts['Q'],
-        counts['N'], counts['S'], counts['V'],
-        counts['F'], counts['Q'],
-        np.max(probs[:,1:])
+        counts['N'],
+        counts['S'],
+        counts['V'],
+        counts['F'],
+        counts['Q'],
+        np.max(probs[:, 1:])
     ]])
 
 # ================= FINAL INFERENCE =================
 def predict_and_plot_record(rec_id, base_path, save_dir, seconds=10):
+    """
+    Final prediction + ECG plot
+    """
 
     X, sig, rlocs, fs = extract_beats_from_record(rec_id, base_path)
     feat = record_features(rec_id, base_path)
@@ -119,9 +122,14 @@ def predict_and_plot_record(rec_id, base_path, save_dir, seconds=10):
     plot_path = os.path.join(save_dir, plot_name)
 
     n = int(seconds * fs)
-    plt.figure(figsize=(15,4))
+    plt.figure(figsize=(15, 4))
     plt.plot(sig[:n])
-    plt.scatter(rlocs[rlocs < n], sig[rlocs[rlocs < n]], c='red', s=15)
+    plt.scatter(
+        rlocs[rlocs < n],
+        sig[rlocs[rlocs < n]],
+        c='red',
+        s=15
+    )
     plt.title(f"ECG Record {rec_id} | Predicted: {label}")
     plt.grid()
     plt.savefig(plot_path)
